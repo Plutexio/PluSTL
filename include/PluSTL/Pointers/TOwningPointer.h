@@ -18,7 +18,7 @@ namespace Plu
         template<typename U>
         friend class TUsePointer;
 
-        // Friend functions dla castów
+        // Friend functions for the casts
         template<typename To, typename From>
         friend TOwningPointer<To> DynamicCast(const TOwningPointer<From>& from);
         
@@ -37,23 +37,23 @@ namespace Plu
             return result;
         }
 
-        // Konstruktor domyślny
+        // Default constructor
         TOwningPointer() : control(nullptr) {}
         
-        // Konstruktor z nullptr
+        // Constructor from nullptr
         TOwningPointer(std::nullptr_t) : control(nullptr) {}
         
-        // Konstruktor z surowym wskaźnikiem
+        // Constructor from a raw pointer
         explicit TOwningPointer(T* ptr)
             : control(ptr ? new ControlBlock<T>(ptr) : nullptr) {}
         
-        // Destruktor - zmniejsza licznik ownerów
+        // Destructor - decrements the owner count
         ~TOwningPointer()
         {
             Release();
         }
 
-        // Copy constructor - zwiększa licznik ownerów
+        // Copy constructor - increments the owner count
         TOwningPointer(const TOwningPointer& other) : control(other.control)
         {
             if (control)
@@ -63,7 +63,7 @@ namespace Plu
             }
         }
 
-        // Copy constructor z konwersją (Derived -> Base)
+        // Converting copy constructor (Derived -> Base)
         template<typename U>
         TOwningPointer(const TOwningPointer<U>& other) : control(other.control)
         {
@@ -92,7 +92,7 @@ namespace Plu
             return *this;
         }
 
-        // Copy assignment z konwersją (Derived -> Base)
+        // Converting copy assignment (Derived -> Base)
         template<typename U>
         TOwningPointer& operator=(const TOwningPointer<U>& other)
         {
@@ -126,7 +126,7 @@ namespace Plu
             return *this;
         }
 
-        // Przypisanie surowego wskaźnika
+        // Raw pointer assignment
         TOwningPointer& operator=(T* ptr)
         {
             Release();
@@ -134,7 +134,7 @@ namespace Plu
             return *this;
         }
 
-        // Przypisanie nullptr
+        // nullptr assignment
         TOwningPointer& operator=(std::nullptr_t)
         {
             Release();
@@ -142,7 +142,7 @@ namespace Plu
             return *this;
         }
 
-        // Gettery
+        // Getters
         [[nodiscard]] T* GetRaw() const
         {
             return control ? static_cast<ControlBlock<T>*>(control)->Get() : nullptr;
@@ -153,7 +153,7 @@ namespace Plu
             return GetRaw();
         }
 
-        // Operatory
+        // Operators
         [[nodiscard]] T* operator->() const
         {
             PLU_PTR_ASSERT_OWNER(control);
@@ -182,13 +182,13 @@ namespace Plu
         }
         
 
-        // Informacje diagnostyczne
+        // Diagnostics
         [[nodiscard]] int GetOwningCount() const
         {
             return control ? control->strongCount.load(std::memory_order_relaxed) : 0;
         }
 
-        // Liczba żywych TUsePointerów (weakCount bez kolektywnej referencji właścicieli).
+        // Number of live TUsePointers (weakCount minus the owners' collective reference).
         [[nodiscard]] int GetUseCount() const
         {
             if (!control) return 0;

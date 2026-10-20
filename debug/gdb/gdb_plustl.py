@@ -1,7 +1,7 @@
 """
-GDB Pretty Printers dla kontenerow i smart pointerow PluSTL.
+GDB pretty printers for the PluSTL containers and smart pointers.
 
-Obsluguje:
+Covers:
   - Plu::DynamicArray<T, Allocator>         (Array/Array.h)
   - Plu::HashMap<TKey, TValue, ...>         (HashMap/HashMap.h)
   - Plu::HashSet<T, ...>                    (HashSet/HashSet.h)
@@ -9,9 +9,9 @@ Obsluguje:
   - Plu::TOwningPointer<T>                  (Pointers/TOwningPointer.h)
   - Plu::TUsePointer<T>                     (Pointers/TUsePointer.h)
 
-BasicString / String / StringW maja wlasny printer w gdb_plustring.py.
+BasicString / String / StringW have their own printer in gdb_plustring.py.
 
-Uzycie: `source gdb_plustl.py` w GDB albo wpis w .gdbinit (patrz debug/gdb/README.md).
+Usage: `source gdb_plustl.py` in GDB, or a line in .gdbinit (see debug/gdb/README.md).
 """
 
 import gdb
@@ -19,7 +19,7 @@ import gdb.printing
 
 
 def _atomic_value(val):
-    """Odczyt std::atomic<int> z libstdc++ (_M_i); fallback na bezposredni int()."""
+    """Reads a libstdc++ std::atomic<int> (_M_i); falls back to a plain int()."""
     try:
         return int(val['_M_i'])
     except (gdb.error, KeyError):
@@ -57,8 +57,8 @@ class DynamicArrayPrinter:
 # Plu::HashMap<TKey, TValue, ...>  -- separate chaining (HashMap/HashMap.h)
 #   mBuckets (Node**), mBucketCount, mElementCount
 #   Node{ Storage: alignas(pair) unsigned char[sizeof(pair)], Next }
-#   Storage jest surowym buforem (wezly z listy wolnych nie maja zywego elementu),
-#   wiec reinterpretujemy go jako std::pair<TKey, TValue> tak samo jak w HashSet.
+#   Storage is a raw buffer (nodes on the free list hold no live element),
+#   so it is reinterpreted as std::pair<TKey, TValue>, the same way as in HashSet.
 # =============================================================================
 class HashMapPrinter:
     def __init__(self, val):
@@ -123,7 +123,7 @@ class HashSetPrinter:
         for i in range(capacity):
             slot = slots[i]
             if int(slot['State']) == self.OCCUPIED:
-                # Storage to wyrownany bufor bajtow; reinterpretuj jako T.
+                # Storage is an aligned byte buffer; reinterpret it as T.
                 value = slot['Storage'].address.cast(elem_ptr_type).dereference()
                 yield f'[{idx}]', value
                 idx += 1
@@ -133,14 +133,14 @@ class HashSetPrinter:
 
 
 # =============================================================================
-# Plu::BasicPath<CharT, ...>  (Path / PathW)  -- pojedyncze pole mPath (BasicString)
+# Plu::BasicPath<CharT, ...>  (Path / PathW)  -- a single mPath field (BasicString)
 # =============================================================================
 class BasicPathPrinter:
     def __init__(self, val):
         self.val = val
 
     def to_string(self):
-        # Zwracamy gdb.Value typu BasicString -> GDB zastosuje jego wlasny printer.
+        # Return a BasicString gdb.Value -> GDB applies its own printer to it.
         return self.val['mPath']
 
     def display_hint(self):
@@ -149,9 +149,9 @@ class BasicPathPrinter:
 
 # =============================================================================
 # Plu::TOwningPointer<T> / Plu::TUsePointer<T>
-#   pole control (ControlBlockBase*); ControlBlockBase{ ptr (void*),
+#   field control (ControlBlockBase*); ControlBlockBase{ ptr (void*),
 #   strongCount (atomic<int>), weakCount (atomic<int>), externallyOwned, owningThread }
-#   Liczba zywych TUsePointerow = weakCount - 1 (kolektywna ref wlascicieli) gdy strong>0.
+#   Live TUsePointers = weakCount - 1 (the owners' collective ref) when strong > 0.
 # =============================================================================
 class _ControlPointerPrinter:
     KIND = "TPointer"
@@ -198,7 +198,7 @@ class TUsePointerPrinter(_ControlPointerPrinter):
 
 
 # =============================================================================
-# Rejestracja
+# Registration
 # =============================================================================
 def build_pretty_printer():
     pp = gdb.printing.RegexpCollectionPrettyPrinter("PluSTL")
@@ -217,5 +217,5 @@ gdb.printing.register_pretty_printer(
     replace=True
 )
 
-print("PluSTL pretty printers zaladowane: "
+print("PluSTL pretty printers loaded: "
       "DynamicArray, HashMap, HashSet, Path/PathW, TOwningPointer, TUsePointer")

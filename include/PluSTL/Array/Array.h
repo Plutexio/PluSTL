@@ -19,7 +19,7 @@ public:
     using ConstIterator = const T*;
     using AllocatorType = Allocator;
 
-    // Konstruktory z obsługą instancji alokatora
+    // Constructors (with allocator-instance support)
     DynamicArray()
         : mData(nullptr), mSize(0), mCapacity(0), mAllocator(Allocator()) {}
 
@@ -39,7 +39,7 @@ public:
         }
     }
 
-    // Copy constructor - kopiuje również alokator
+    // Copy constructor - also copies the allocator
     DynamicArray(const DynamicArray& other)
         : mData(nullptr), mSize(0), mCapacity(0), mAllocator(other.mAllocator) {
         Reserve(other.mSize);
@@ -58,7 +58,7 @@ public:
         other.mCapacity = 0;
     }
 
-    // Destruktor - używa instancji alokatora
+    // Destructor - uses the allocator instance
     ~DynamicArray() {
         Clear();
         if (mData) {
@@ -106,7 +106,7 @@ public:
         return *this;
     }
 
-    // Dodawanie elementów - używa mAllocator.Construct
+    // Adding elements - goes through mAllocator.Construct
     void PushBack(const T& value) {
         if (!GrowForPush()) return;
         mAllocator.Construct(&mData[mSize], value);
@@ -135,7 +135,7 @@ public:
         }
     }
 
-    // Dostęp do elementów
+    // Element access
     T& operator[](SizeType index) { return mData[index]; }
     const T& operator[](SizeType index) const { return mData[index]; }
 
@@ -156,7 +156,7 @@ public:
     T* Data() { return mData; }
     const T* Data() const { return mData; }
 
-    // Rozmiar i pojemność
+    // Size and capacity
     [[nodiscard]] SizeType Size() const { return mSize; }
     [[nodiscard]] SizeType Capacity() const { return mCapacity; }
     [[nodiscard]] bool IsEmpty() const { return mSize == 0; }
@@ -228,7 +228,7 @@ public:
         mSize = 0;
     }
 
-    // Iteratory
+    // Iterators
     Iterator Begin() { return mData; }
     ConstIterator Begin() const { return mData; }
     Iterator End() { return mData + mSize; }
@@ -239,7 +239,7 @@ public:
     Iterator end() { return End(); }
     ConstIterator end() const { return End(); }
 
-    // Utility methods - Wyszukiwanie
+    // Utility methods - Search
     Iterator Find(const T& value) {
         for (SizeType i = 0; i < mSize; ++i) {
             if (mData[i] == value) return &mData[i];
@@ -281,7 +281,7 @@ public:
         return static_cast<SizeType>(-1);
     }
 
-    // Utility methods - Usuwanie
+    // Utility methods - Removal
     bool Remove(const T& value) {
         Iterator it = Find(value);
         if (it != End()) {
@@ -352,7 +352,7 @@ public:
     [[deprecated("use RemoveRange(Iterator, Iterator)")]]
     void Erase(Iterator first, Iterator last) { RemoveRange(first, last); }
 
-    // Utility methods - Modyfikacja
+    // Utility methods - Modification
     void Insert(Iterator pos, const T& value) {
         SizeType index = pos - Begin();
         if (!GrowForPush()) return;
@@ -397,7 +397,7 @@ public:
         Sort([](const T& a, const T& b) { return a < b; });
     }
 
-    // Dodaje elementy z innej tablicy DynamicArray
+    // Appends the elements of another DynamicArray
     void Append(const DynamicArray& other) {
         if (other.IsEmpty()) return;
 
@@ -408,7 +408,7 @@ public:
         }
     }
 
-    // Dodaje elementy z innej tablicy DynamicArray (wersja Move)
+    // Appends the elements of another DynamicArray (move version)
     void Append(DynamicArray&& other) {
         if (other.IsEmpty()) return;
 
@@ -417,11 +417,11 @@ public:
             mAllocator.Construct(&mData[mSize], std::move(item));
             ++mSize;
         }
-        // Opcjonalnie czyścimy źródło, choć destruktor 'other' i tak by to zrobił
+        // Clear the source eagerly, although the destructor of 'other' would do it anyway
         other.mSize = 0;
     }
 
-    // Dodaje listę inicjalizacyjną, np. arr.Append({1, 2, 3});
+    // Appends an initializer list, e.g. arr.Append({1, 2, 3});
     void Append(std::initializer_list<T> init) {
         if (init.size() == 0) return;
 

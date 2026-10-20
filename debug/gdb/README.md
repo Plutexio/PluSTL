@@ -1,76 +1,83 @@
-# Debug — GDB Pretty Printers dla PluSTL
+# GDB pretty printers for PluSTL
 
-Pretty-printery GDB, które pokazują kontenery i smart pointery PluSTL w czytelnej
-formie zamiast surowych pól (`m_Data`, `mSlots`, `control`, …).
+GDB pretty printers that show PluSTL containers and smart pointers in a readable form
+instead of their raw fields (`mData`, `mSlots`, `control`, …).
 
-## Pliki
+## Files
 
-| Plik | Typy |
+| File | Types |
 |---|---|
 | `gdb_plustl.py` | `Plu::DynamicArray<T>`, `Plu::HashMap<K,V>`, `Plu::HashSet<T>`, `Plu::Path`/`PathW` (`BasicPath`), `Plu::TOwningPointer<T>`, `Plu::TUsePointer<T>` |
-| `gdb_plustring.py` | `Plu::String`/`StringW` (`BasicString<CharT>`) — z detekcją SSO/heap |
+| `gdb_plustring.py` | `Plu::String`/`StringW` (`BasicString<CharT>`) — tells SSO from heap storage |
 
-## Co pokazują
+## What they show
 
 ```
 DynamicArray [size=3, cap=4] = {10, 20, 30}
-"krotki" [len=6, cap=23, SSO]
-"/home/Plutex/test/plik.txt" [len=26, cap=26, heap]
+"short" [len=5, cap=23, SSO]
+"/home/user/projects/some/file.txt" [len=33, cap=33, heap]
 HashSet [size=3, cap=16, deleted=0] = {2, 1, 3}
-HashMap [elements=2, buckets=8] = {[200] = "dwiescie", [100] = "sto"}
+HashMap [elements=2, buckets=8] = {[200] = "two hundred", [100] = "one hundred"}
 TOwningPointer @ 0x55…e020 [strong=1, uses=1] = {pointee = {a = 7, b = 9}}
 TUsePointer @ 0x55…e020 [strong=1, uses=1] = {pointee = {a = 7, b = 9}}
 ```
 
-- `strong` = liczba `TOwningPointer` (strongCount).
-- `uses` = liczba żywych `TUsePointer` (`weakCount - 1`, czyli bez kolektywnej
-  referencji właścicieli). Wygasły obiekt: `<expired>`; pusty pointer: `= nullptr`.
-- String pokazuje `len`, `cap` i czy siedzi w buforze SSO czy na stercie.
+- `strong` = number of `TOwningPointer`s (strongCount).
+- `uses` = number of live `TUsePointer`s (`weakCount - 1`, i.e. without the owners'
+  collective reference). An expired object shows `<expired>`; an empty pointer `= nullptr`.
+- Strings show `len`, `cap` and whether they sit in the SSO buffer or on the heap.
 
-## Ładowanie
+## Loading
 
-`.gdbinit` w katalogu głównym projektu sourcuje już oba pliki (ścieżki względne
-`./PluSTL/debug/gdb/…`, więc GDB musi startować z katalogu projektu):
+Paths below assume PluSTL is checked out as `PluSTL/` in your project root (e.g. as a git
+submodule) — adjust them to wherever it lives.
+
+### `.gdbinit` in the project root
 
 ```
 source ./PluSTL/debug/gdb/gdb_plustl.py
 source ./PluSTL/debug/gdb/gdb_plustring.py
 ```
 
-### Ręcznie w sesji GDB
+The paths are relative, so GDB has to start in the project directory, and GDB only reads a
+project `.gdbinit` from a directory allowed by `auto-load safe-path`.
+
+### By hand in a GDB session
+
 ```gdb
 source /path/to/PluSTL/debug/gdb/gdb_plustl.py
 source /path/to/PluSTL/debug/gdb/gdb_plustring.py
 ```
 
-### CLion  ← najczęstszy problem: „widzę tylko raw"
+### CLion — the usual "I only see raw fields" problem
 
-CLion używa **własnego, dołączonego GDB** (`…/clion/bin/gdb/linux/x64/bin/gdb`) i
-**nie** sourcuje projektowego `.gdbinit` — blokuje go `auto-load safe-path`, a do
-tego ścieżki względne `./PluSTL/debug/gdb/…` nie rozwiążą się, gdy CWD debugera
-nie jest katalogiem projektu.
+CLion runs its **own bundled GDB** (`…/clion/bin/gdb/linux/x64/bin/gdb`) and does **not**
+source the project `.gdbinit`: `auto-load safe-path` blocks it, and on top of that relative
+`./PluSTL/debug/gdb/…` paths do not resolve when the debugger's working directory is not the
+project directory.
 
-Rozwiązanie (działa niezależnie od CWD) — wpis w **`~/.gdbinit`** z absolutnymi
-ścieżkami; dołączony GDB CLiona czyta home-init przy starcie:
+The fix, independent of the working directory, is an entry with absolute paths in
+**`~/.gdbinit`**, which CLion's bundled GDB reads on startup:
 
 ```gdb
-add-auto-load-safe-path /home/Plutex/CLionProjects/PluEngine
+add-auto-load-safe-path /path/to/your/project
 source /path/to/PluSTL/debug/gdb/gdb_plustl.py
 source /path/to/PluSTL/debug/gdb/gdb_plustring.py
 ```
 
-Jeśli po tym dalej widać raw, sprawdź dwa przełączniki CLiona i zrestartuj sesję debug:
+If you still see raw fields after that, check two CLion settings and restart the debug session:
 1. **Settings → Build, Execution, Deployment → Debugger → Data Views → C/C++** →
-   włącz *„Enable Python renderers / GDB pretty printers"* (bez tego panel Variables
-   nie używa printerów, nawet gdy są załadowane).
-2. **Settings → Build, Execution, Deployment → Debugger** → opcja ładowania
-   `.gdbinit` (jeśli w danej wersji istnieje) musi być włączona.
+   enable *"Enable Python renderers / GDB pretty printers"* (without it the Variables view
+   ignores the printers even when they are loaded).
+2. **Settings → Build, Execution, Deployment → Debugger** → the option to load `.gdbinit`
+   (where your version has it) must be enabled.
 
-Weryfikacja: w sesji debug otwórz zakładkę konsoli GDB i wpisz `print twojaZmienna` —
-na starcie powinien też mignąć komunikat „PluSTL pretty printers zaladowane: …".
+To verify: open the GDB console tab in a debug session and type `print yourVariable` — at
+startup you should also see the message "PluSTL pretty printers loaded: …".
 
 ### VS Code (cppdbg)
-W `launch.json` w konfiguracji:
+
+In the configuration in `launch.json`:
 ```json
 "setupCommands": [
   { "text": "source ${workspaceFolder}/PluSTL/debug/gdb/gdb_plustl.py" },
@@ -78,11 +85,11 @@ W `launch.json` w konfiguracji:
 ]
 ```
 
-## Uwagi implementacyjne
+## Implementation notes
 
-- Printery odczytują pola po nazwach z nagłówków PluSTL. Po zmianie layoutu
-  kontenera (nazwy pól w `Array.h`, `HashMap.h`, `HashSet.h`, `Path.h`,
-  `ControlBlock.h`) trzeba zaktualizować odpowiedni printer.
-- `strongCount`/`weakCount` to `std::atomic<int>` — czytane przez `_M_i`
-  (libstdc++), z fallbackiem.
-- Wymaga buildu z symbolami debug (presety `PluDebugLinux-*`).
+- The printers read fields by the names used in the PluSTL headers. After a container's
+  layout changes (field names in `Array.h`, `HashMap.h`, `HashSet.h`, `Path.h`,
+  `ControlBlock.h`), the matching printer has to be updated.
+- `strongCount`/`weakCount` are `std::atomic<int>` — read through `_M_i` (libstdc++), with a
+  fallback.
+- Needs a build with debug symbols.

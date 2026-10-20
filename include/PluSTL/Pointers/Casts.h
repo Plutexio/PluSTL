@@ -15,9 +15,9 @@ namespace Plu
     template<typename T>
     class TUsePointer;
     
-    // Funkcje pomocnicze do konwersji
+    // Pointer cast helpers
     
-    // Upcasting (Derived -> Base) - zawsze bezpieczny
+    // Upcasting (Derived -> Base) - always safe
     template<typename T>
     TUsePointer<T> CastFromOwning(const TOwningPointer<T>& owning)
     {
@@ -32,7 +32,7 @@ namespace Plu
         return TUsePointer<T>(owning);
     }
 
-    // Dynamic cast dla TOwningPointer (Base -> Derived)
+    // Dynamic cast for TOwningPointer (Base -> Derived)
     template<typename To, typename From>
     TOwningPointer<To> DynamicCast(const TOwningPointer<From>& from)
     {
@@ -43,7 +43,7 @@ namespace Plu
         if (!casted)
             return nullptr;
 
-        // Tworzymy nowy TOwningPointer współdzielący control block
+        // Build a new TOwningPointer sharing the control block
         TOwningPointer<To> result;
         result.control = reinterpret_cast<ControlBlock<To>*>(from.control);
         if (result.control)
@@ -54,7 +54,7 @@ namespace Plu
         return result;
     }
 
-    // Dynamic cast dla TUsePointer (Base -> Derived)
+    // Dynamic cast for TUsePointer (Base -> Derived)
     template<typename To, typename From>
     TUsePointer<To> DynamicCast(const TUsePointer<From>& from)
     {
@@ -65,7 +65,7 @@ namespace Plu
         if (!casted)
             return nullptr;
 
-        // Tworzymy nowy TUsePointer współdzielący control block
+        // Build a new TUsePointer sharing the control block
         TUsePointer<To> result;
         result.control = reinterpret_cast<ControlBlock<To>*>(from.control);
         if (result.control)
@@ -75,7 +75,7 @@ namespace Plu
         return result;
     }
 
-    // Static cast (szybszy ale niebezpieczny - bez sprawdzania)
+    // Static cast (faster but unchecked - no type check)
     template<typename To, typename From>
     TOwningPointer<To> StaticCast(const TOwningPointer<From>& from)
     {

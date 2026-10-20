@@ -16,17 +16,17 @@
 namespace Plu
 {
     // =============================================================================
-    // UTF ENCODING HELPERS (używane przez FromNarrow/FromWide)
+    // UTF ENCODING HELPERS (used by FromNarrow/FromWide)
     // =============================================================================
-    // Konwencja: narrow (char) = UTF-8, wide (wchar_t) = UTF-16 gdy sizeof(wchar_t)==2
-    // (Windows) lub UTF-32 gdy ==4 (Linux). Nieprawidłowe sekwencje -> U+FFFD.
+    // Convention: narrow (char) = UTF-8, wide (wchar_t) = UTF-16 when sizeof(wchar_t)==2
+    // (Windows) or UTF-32 when ==4 (Linux). Invalid sequences -> U+FFFD.
 
     namespace StringEncoding
     {
         inline constexpr char32_t ReplacementChar = 0xFFFD;
 
-        // Dekoduje jedną sekwencję UTF-8 spod str (zakończonego nullem) do outCp.
-        // Zwraca liczbę skonsumowanych bajtów (>= 1).
+        // Decodes one UTF-8 sequence at str (null-terminated) into outCp.
+        // Returns the number of bytes consumed (>= 1).
         inline std::size_t DecodeUtf8(const char* str, char32_t& outCp) noexcept {
             const auto* s = reinterpret_cast<const unsigned char*>(str);
             const unsigned char b0 = s[0];
@@ -50,7 +50,7 @@ namespace Plu
                 cp = (cp << 6) | (s[i] & 0x3Fu);
             }
 
-            // Odrzuć overlong encoding, surrogaty i wartości poza zakresem Unicode
+            // Reject overlong encodings, surrogates and values outside the Unicode range
             const bool overlong = (len == 2 && cp < 0x80) || (len == 3 && cp < 0x800) || (len == 4 && cp < 0x10000);
             if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF) || overlong) {
                 outCp = ReplacementChar;
@@ -64,7 +64,7 @@ namespace Plu
             return cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
         }
 
-        // Zapisuje cp jako UTF-8 do out (bufor min. 4 bajty); zwraca liczbę bajtów.
+        // Writes cp as UTF-8 into out (buffer of at least 4 bytes); returns the byte count.
         inline std::size_t EncodeUtf8(char32_t cp, char* out) noexcept {
             if (cp < 0x80) {
                 out[0] = static_cast<char>(cp);
@@ -88,8 +88,8 @@ namespace Plu
             return 4;
         }
 
-        // Odczytuje jeden codepoint spod *pp i przesuwa wskaźnik (o 2 jednostki
-        // przy poprawnej parze surrogatów na 2-bajtowym wchar_t).
+        // Reads one code point at *pp and advances the pointer (by 2 units
+        // for a valid surrogate pair on a 2-byte wchar_t).
         inline char32_t DecodeWide(const wchar_t** pp) noexcept {
             const wchar_t* p = *pp;
             auto cp = static_cast<char32_t>(static_cast<std::uint32_t>(*p++));
@@ -100,10 +100,10 @@ namespace Plu
                         cp = 0x10000 + ((cp - 0xD800) << 10) + (low - 0xDC00);
                         ++p;
                     } else {
-                        cp = ReplacementChar; // niesparowany high surrogate
+                        cp = ReplacementChar; // unpaired high surrogate
                     }
                 } else if (cp >= 0xDC00 && cp <= 0xDFFF) {
-                    cp = ReplacementChar; // samotny low surrogate
+                    cp = ReplacementChar; // lone low surrogate
                 }
             } else {
                 if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {
@@ -114,12 +114,12 @@ namespace Plu
             return cp;
         }
 
-        // Liczba jednostek wchar_t potrzebnych na cp (para surrogatów na Windowsie).
+        // Number of wchar_t units cp needs (a surrogate pair on Windows).
         [[nodiscard]] inline std::size_t WideEncodedLength(char32_t cp) noexcept {
             return (sizeof(wchar_t) == 2 && cp >= 0x10000) ? 2 : 1;
         }
 
-        // Zapisuje cp do out (bufor min. 2 jednostki); zwraca liczbę jednostek.
+        // Writes cp into out (buffer of at least 2 units); returns the unit count.
         inline std::size_t EncodeWide(char32_t cp, wchar_t* out) noexcept {
             if constexpr (sizeof(wchar_t) == 2) {
                 if (cp >= 0x10000) {
@@ -538,13 +538,13 @@ namespace Plu
             SizeType end = Find(delimiter);
 
             while (end != Npos) {
-                // Dodajemy fragment od startu do znalezionego ogranicznika
+                // Add the piece from start up to the delimiter found
                 tokens.PushBack(Substring(start, end - start));
                 start = end + 1;
                 end = Find(delimiter, start);
             }
 
-            // Dodajemy ostatni fragment (po ostatnim ograniczniku)
+            // Add the last piece (after the last delimiter)
             tokens.PushBack(Substring(start));
 
             return tokens;
@@ -1098,7 +1098,7 @@ namespace Plu
                 // char (UTF-8) -> wchar_t (UTF-16/32)
                 if (!str) return BasicString();
 
-                // Przebieg 1: policz jednostki wchar_t
+                // Pass 1: count the wchar_t units
                 SizeType outLen = 0;
                 for (const char* p = str; *p;) {
                     char32_t cp;
@@ -1111,7 +1111,7 @@ namespace Plu
                     result.AllocateHeap(outLen);
                 }
 
-                // Przebieg 2: zapisz
+                // Pass 2: write
                 wchar_t* dest = result.GetData();
                 for (const char* p = str; *p;) {
                     char32_t cp;
@@ -1137,7 +1137,7 @@ namespace Plu
                 // wchar_t (UTF-16/32) -> char (UTF-8)
                 if (!str) return BasicString();
 
-                // Przebieg 1: policz bajty UTF-8
+                // Pass 1: count the UTF-8 bytes
                 SizeType outLen = 0;
                 for (const wchar_t* p = str; *p;) {
                     outLen += StringEncoding::Utf8EncodedLength(StringEncoding::DecodeWide(&p));
@@ -1148,7 +1148,7 @@ namespace Plu
                     result.AllocateHeap(outLen);
                 }
 
-                // Przebieg 2: zapisz
+                // Pass 2: write
                 char* dest = result.GetData();
                 for (const wchar_t* p = str; *p;) {
                     dest += StringEncoding::EncodeUtf8(StringEncoding::DecodeWide(&p), dest);
@@ -1165,7 +1165,7 @@ namespace Plu
             return FromNarrow(str.CStr());
         }
 
-        // Przeciążenie dla BasicString<wchar_t>
+        // Overload for BasicString<wchar_t>
         template<typename SrcCharT = wchar_t, typename SrcAlloc = DefaultAllocator<wchar_t>>
         static BasicString FromWide(const BasicString<wchar_t, SrcAlloc>& str) noexcept {
             return FromWide(str.CStr());

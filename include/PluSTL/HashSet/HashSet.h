@@ -26,16 +26,16 @@ namespace Plu
     >
     class HashSet {
     private:
-        // Stan slotu w tablicy hash
+        // State of a slot in the hash table
         enum class SlotState : unsigned char {
-            Empty,    // Nigdy nie używany
-            Occupied, // Zawiera wartość
-            Deleted   // Był używany, ale wartość została usunięta
+            Empty,    // Never used
+            Occupied, // Holds a value
+            Deleted   // Was used, but its value has been removed
         };
 
-        // Pojedynczy slot w tablicy hash
+        // A single slot in the hash table
         struct Slot {
-            alignas(T) unsigned char Storage[sizeof(T)]; // Wyrównane storage dla T
+            alignas(T) unsigned char Storage[sizeof(T)]; // Aligned storage for T
             SlotState State;
 
             Slot() noexcept : State(SlotState::Empty) {}
@@ -49,12 +49,12 @@ namespace Plu
             }
         };
 
-        Slot* mSlots;              // Tablica slotów
-        std::size_t mCapacity;     // Pojemność tablicy
-        std::size_t mSize;         // Liczba elementów
-        std::size_t mDeletedCount; // Liczba usuniętych slotów
-        Hasher mHasher;            // Funkcja hashująca
-        Allocator mAllocator;      // Alokator
+        Slot* mSlots;              // Slot array
+        std::size_t mCapacity;     // Table capacity
+        std::size_t mSize;         // Element count
+        std::size_t mDeletedCount; // Deleted slot count
+        Hasher mHasher;            // Hash function
+        Allocator mAllocator;      // Allocator
 
         static constexpr std::size_t kDefaultCapacity = 16;
         static constexpr float kMaxLoadFactor = 0.75f;
@@ -68,7 +68,7 @@ namespace Plu
 
     public:
         // ========================================================================
-        // Iteratory
+        // Iterators
         // ========================================================================
         class Iterator {
             friend class HashSet;
@@ -78,7 +78,7 @@ namespace Plu
 
             Iterator(Slot* current, Slot* end) noexcept
                 : mCurrent(current), mEnd(end) {
-                // Skip do pierwszego occupied slotu
+                // Skip to the first occupied slot
                 while (mCurrent != mEnd && mCurrent->State != SlotState::Occupied) {
                     ++mCurrent;
                 }
@@ -174,7 +174,7 @@ namespace Plu
         };
 
         // ========================================================================
-        // Konstruktory i destruktor
+        // Constructors and destructor
         // ========================================================================
         HashSet() noexcept
             : mSlots(nullptr)
@@ -265,15 +265,15 @@ namespace Plu
         }
 
         // ========================================================================
-        // Główne operacje
+        // Main operations
         // ========================================================================
 
-        // Insert z const reference
+        // Insert by const reference
         bool Insert(const T& value) noexcept {
             return InsertInternal(value);
         }
 
-        // Insert z move semantics
+        // Insert with move semantics
         bool Insert(T&& value) noexcept {
             return InsertInternal(std::move(value));
         }
@@ -298,13 +298,13 @@ namespace Plu
                 return false;
             }
 
-            // Zniszcz wartość i oznacz jako deleted
+            // Destroy the value and mark the slot as deleted
             mAllocator.Destroy(slot.GetValue());
             slot.State = SlotState::Deleted;
             --mSize;
             ++mDeletedCount;
 
-            // Rehash jeśli za dużo deleted slotów
+            // Rehash if there are too many deleted slots
             if (mDeletedCount > mCapacity * kRehashThreshold) {
                 Rehash(mCapacity);
             }
@@ -360,7 +360,7 @@ namespace Plu
         void Reserve(std::size_t newCapacity) noexcept {
             if (newCapacity <= mCapacity) return;
 
-            // Zaokrąglij do potęgi dwójki dla lepszej wydajności
+            // Round up to a power of two for faster indexing
             newCapacity = NextPowerOfTwo(newCapacity);
             Rehash(newCapacity);
         }
@@ -374,14 +374,14 @@ namespace Plu
             Slot* oldSlots = mSlots;
             std::size_t oldCapacity = mCapacity;
 
-            // Alokuj nową tablicę
+            // Allocate the new table
             mSlots = mSlotAllocator.Allocate(newCapacity);
             if (!mSlots) {
-                mSlots = oldSlots; // Przywróć stary wskaźnik w razie błędu
+                mSlots = oldSlots; // Restore the old pointer on failure
                 return;
             }
 
-            // Zainicjalizuj nowe sloty
+            // Initialize the new slots
             for (std::size_t i = 0; i < newCapacity; ++i) {
                 mSlotAllocator.Construct(&mSlots[i]);
             }
@@ -407,7 +407,7 @@ namespace Plu
         }
 
         // ========================================================================
-        // Gettery
+        // Getters
         // ========================================================================
         std::size_t Size() const noexcept { return mSize; }
         std::size_t Capacity() const noexcept { return mCapacity; }
@@ -417,7 +417,7 @@ namespace Plu
         }
 
         // ========================================================================
-        // Iteratory
+        // Iterators
         // ========================================================================
         Iterator Begin() noexcept {
             return Iterator(mSlots, mSlots + mCapacity);
@@ -446,13 +446,13 @@ namespace Plu
 
     private:
         // ========================================================================
-        // Wewnętrzne metody pomocnicze
+        // Internal helpers
         // ========================================================================
 
-        // Znajdź indeks slotu dla wartości (linear probing)
+        // Find the slot index for a value (linear probing)
         std::size_t FindSlotIndex(const T& value) const noexcept {
             std::size_t hash = mHasher(value);
-            std::size_t index = hash & (mCapacity - 1); // Szybki modulo dla potęg 2
+            std::size_t index = hash & (mCapacity - 1); // Fast modulo for powers of two
             std::size_t firstDeleted = mCapacity;
 
             // Linear probing
@@ -461,7 +461,7 @@ namespace Plu
                 const Slot& slot = mSlots[probeIndex];
 
                 if (slot.State == SlotState::Empty) {
-                    // Jeśli znaleźliśmy deleted slot wcześniej, użyj go
+                    // If we passed a deleted slot earlier, reuse it
                     return firstDeleted != mCapacity ? firstDeleted : probeIndex;
                 }
 
@@ -472,7 +472,7 @@ namespace Plu
                     continue;
                 }
 
-                // Porównaj wartości
+                // Compare the values
                 if (*slot.GetValue() == value) {
                     return probeIndex;
                 }
@@ -481,9 +481,9 @@ namespace Plu
             return firstDeleted != mCapacity ? firstDeleted : index;
         }
 
-        // Grow if needed, then place. Uwaga: przy mCapacity == 0 (np. set po std::move)
-        // mCapacity * 2 == 0, a Reserve(0) jest no-opem — zostawiłoby mSlots == nullptr
-        // i następny dereferencjował null. Rośnij wtedy do kDefaultCapacity.
+        // Grow if needed, then place. Note: with mCapacity == 0 (e.g. a set after std::move)
+        // mCapacity * 2 == 0, and Reserve(0) is a no-op — that would leave mSlots == nullptr
+        // for the next line to dereference. Grow to kDefaultCapacity in that case.
         template<typename U>
         bool InsertInternal(U&& value) noexcept {
             if (mSize + 1 > mCapacity * kMaxLoadFactor) {
@@ -499,12 +499,12 @@ namespace Plu
             std::size_t index = FindSlotIndex(value);
             Slot& slot = mSlots[index];
 
-            // Element już istnieje
+            // Element already present
             if (slot.State == SlotState::Occupied) {
                 return false;
             }
 
-            // Wstaw nowy element
+            // Insert the new element
             if (slot.State == SlotState::Deleted) {
                 --mDeletedCount;
             }
@@ -516,7 +516,7 @@ namespace Plu
             return true;
         }
 
-        // Oblicz następną potęgę dwójki
+        // Compute the next power of two
         static std::size_t NextPowerOfTwo(std::size_t n) noexcept {
             if (n <= 1) return 1;
             --n;

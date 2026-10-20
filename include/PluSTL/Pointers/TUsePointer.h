@@ -18,7 +18,7 @@ namespace Plu
         template<typename U>
         friend class TUsePointer;
 
-        // Friend functions dla castów
+        // Friend functions for the casts
         template<typename To, typename From>
         friend TUsePointer<To> DynamicCast(const TUsePointer<From>& from);
         
@@ -26,13 +26,13 @@ namespace Plu
         friend TUsePointer<To> StaticCast(const TUsePointer<From>& from);
 
     public:
-        // Konstruktor domyślny
+        // Default constructor
         TUsePointer() : control(nullptr) {}
         
-        // Konstruktor z nullptr
+        // Constructor from nullptr
         TUsePointer(std::nullptr_t) : control(nullptr) {}
         
-        // Konstruktor z TOwningPointer
+        // Constructor from TOwningPointer
         TUsePointer(const TOwningPointer<T>& owner) : control(owner.control)
         {
             if (control)
@@ -41,7 +41,7 @@ namespace Plu
             }
         }
 
-        // Konstruktor z TOwningPointer z konwersją (Derived -> Base)
+        // Converting constructor from TOwningPointer (Derived -> Base)
         template<typename U>
         TUsePointer(const TOwningPointer<U>& owner) : control(owner.control)
         {
@@ -53,7 +53,7 @@ namespace Plu
             }
         }
 
-        // Destruktor
+        // Destructor
         ~TUsePointer()
         {
             Release();
@@ -68,7 +68,7 @@ namespace Plu
             }
         }
 
-        // Copy constructor z konwersją (Derived -> Base)
+        // Converting copy constructor (Derived -> Base)
         template<typename U>
         TUsePointer(const TUsePointer<U>& other) : control(other.control)
         {
@@ -95,7 +95,7 @@ namespace Plu
             return *this;
         }
 
-        // Copy assignment z konwersją (Derived -> Base)
+        // Converting copy assignment (Derived -> Base)
         template<typename U>
         TUsePointer& operator=(const TUsePointer<U>& other)
         {
@@ -128,7 +128,7 @@ namespace Plu
             return *this;
         }
 
-        // Przypisanie z TOwningPointer
+        // Assignment from TOwningPointer
         TUsePointer& operator=(const TOwningPointer<T>& owner)
         {
             Release();
@@ -140,7 +140,7 @@ namespace Plu
             return *this;
         }
 
-        // Przypisanie z TOwningPointer z konwersją (Derived -> Base)
+        // Converting assignment from TOwningPointer (Derived -> Base)
         template<typename U>
         TUsePointer& operator=(const TOwningPointer<U>& owner)
         {
@@ -155,7 +155,7 @@ namespace Plu
             return *this;
         }
 
-        // Przypisanie nullptr
+        // nullptr assignment
         TUsePointer& operator=(std::nullptr_t)
         {
             Release();
@@ -163,7 +163,7 @@ namespace Plu
             return *this;
         }
 
-        // Gettery - rzucają wyjątek jeśli brak ownerów
+        // Getters - throw if there are no owners left
         [[nodiscard]] T* GetRaw() const
         {
             if (!control) return nullptr;
@@ -177,7 +177,7 @@ namespace Plu
             return GetRaw();
         }
 
-        // Operatory - rzucają wyjątek jeśli brak ownerów
+        // Operators - throw if there are no owners left
         [[nodiscard]] T* operator->() const
         {
             return GetRaw();
@@ -188,7 +188,7 @@ namespace Plu
             return *GetRaw();
         }
 
-        // Sprawdzenie czy obiekt jest jeszcze żywy
+        // Whether the object is still alive
         [[nodiscard]] bool IsValid() const
         {
             return control && control->strongCount.load(std::memory_order_acquire) > 0 && control->ptr != nullptr;
@@ -231,13 +231,13 @@ namespace Plu
             return GetRaw() != nullptr;
         }
 
-        // Informacje diagnostyczne
+        // Diagnostics
         [[nodiscard]] int GetOwningCount() const
         {
             return control ? control->strongCount.load(std::memory_order_relaxed) : 0;
         }
 
-        // Liczba żywych TUsePointerów (weakCount bez kolektywnej referencji właścicieli).
+        // Number of live TUsePointers (weakCount minus the owners' collective reference).
         [[nodiscard]] int GetUseCount() const
         {
             if (!control) return 0;
