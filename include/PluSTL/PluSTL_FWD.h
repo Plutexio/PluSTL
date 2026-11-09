@@ -17,6 +17,7 @@
 
 //Arrays
 #include "PluSTL/Array/Array.h"
+#include "PluSTL/Array/StaticArray.h"
 
 //Queues
 #include "PluSTL/Queue/Queue.h"

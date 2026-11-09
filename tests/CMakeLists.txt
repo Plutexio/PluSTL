@@ -6,6 +6,7 @@ option(PLUSTL_TESTS_TSAN "Build the PluSTL tests with ThreadSanitizer" OFF)
 add_executable(PluSTLTests
         Main.cpp
         Test_DynamicArray.cpp
+        Test_StaticArray.cpp
         Test_HashMap.cpp
         Test_HashSet.cpp
         Test_Hashers.cpp

@@ -9,6 +9,7 @@ and is now a standalone library with no dependencies beyond the C++ standard lib
 | Header (`PluSTL/...`) | Types |
 |---|---|
 | `Array/Array.h` | `DynamicArray<T>` — contiguous growable array (`std::vector`) |
+| `Array/StaticArray.h` | `StaticArray<T, N>` — fixed-size inline array, aggregate and constexpr (`std::array`) |
 | `Queue/Queue.h` | `Queue<T>` — ring-buffer deque (`std::deque` / `std::queue`) |
 | `HashMap/HashMap.h` | `HashMap<K, V>` — separate chaining, stable value addresses (`std::unordered_map`) |
 | `HashSet/HashSet.h` | `HashSet<T>` — open addressing (`std::unordered_set`) |
