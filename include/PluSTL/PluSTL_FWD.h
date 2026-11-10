@@ -31,6 +31,9 @@
 //HashSet
 #include "PluSTL/HashSet/HashSet.h"
 
+//Functional
+#include "PluSTL/Functional/MoveOnlyFunction.h"
+
 // Concurrent/ is deliberately NOT included here. This header is the precompiled header
 // for both Engine (LibEngine/CMakeLists.txt) and PluEditor (Editor/CMakeLists.txt), so
 // anything added here lands in every translation unit in the project — and the concurrent

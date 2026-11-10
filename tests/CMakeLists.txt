@@ -11,6 +11,7 @@ add_executable(PluSTLTests
         Test_HashSet.cpp
         Test_Hashers.cpp
         Test_Queue.cpp
+        Test_MoveOnlyFunction.cpp
         Test_ConcurrentHashMap.cpp
         Test_ConcurrentHashSet.cpp
         Test_ConcurrentQueue.cpp

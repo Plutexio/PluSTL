@@ -15,6 +15,7 @@ and is now a standalone library with no dependencies beyond the C++ standard lib
 | `HashSet/HashSet.h` | `HashSet<T>` — open addressing (`std::unordered_set`) |
 | `String/String.h` | `String` / `StringW` (`BasicString<CharT>`) — SSO string with split, case, number and format helpers |
 | `Path/Path.h` | `Path` / `PathW` (`BasicPath<CharT>`) — path manipulation on top of `BasicString` |
+| `Functional/MoveOnlyFunction.h` | `MoveOnlyFunction<R(Args...)>` — type-erased callable that may hold move-only lambdas, inline buffer for small ones (`std::move_only_function`) |
 | `Hashers/Default.h`, `Hashers/String.h` | `DefaultHash<T>`, `HashCombine` — the hasher every container uses by default |
 | `Allocators/Default.h` | `DefaultAllocator<T>` and the `Rebind` machinery the containers allocate through |
 | `Pointers/TOwningPointer.h`, `Pointers/TUsePointer.h`, `Pointers/Casts.h` | `TOwningPointer<T>` (strong, `std::shared_ptr`-like) and `TUsePointer<T>` (weak observer), `DynamicCast` / `StaticCast` |
